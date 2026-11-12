@@ -1,182 +1,4 @@
-import 'package:clean_arch_session/core/routes/routes.dart';
-import 'package:clean_arch_session/feature/auth/presentation/cubit/auth_cubit.dart';
-import 'package:clean_arch_session/feature/store/domain/entities/store_entities.dart';
-import 'package:clean_arch_session/feature/store/presentation/store_cubit.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-
-const _ink = Color(0xFF172B4D);
-const _brand = Color(0xFF176B5B);
-const _canvas = Color(0xFFF5F7F6);
-
-class StoreScreen extends StatefulWidget {
-  const StoreScreen({super.key});
-
-  @override
-  State<StoreScreen> createState() => _StoreScreenState();
-}
-
-class _StoreScreenState extends State<StoreScreen> {
-  int _tabIndex = 0;
-  Future<void>? _catalogRefreshInProgress;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final store = context.read<StoreCubit>();
-      store.loadCategories();
-      store.loadProducts();
-      store.loadCart();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    const titles = ['اكتشف المنتجات', 'سلة التسوق', 'طلباتي'];
-    return MultiBlocListener(
-      listeners: [
-        BlocListener<StoreCubit, StoreState>(
-          listenWhen: (previous, current) =>
-              previous.error != current.error ||
-              previous.message != current.message,
-          listener: (context, state) {
-            final text = state.error ?? state.message;
-            if (text == null) return;
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(
-                SnackBar(
-                  content: Text(text, textDirection: TextDirection.rtl),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            context.read<StoreCubit>().clearFeedback();
-          },
-        ),
-        BlocListener<AuthCubit, AuthState>(
-          listener: (context, state) {
-            if (state is AuthLoggedOut) {
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                Routes.login,
-                (route) => false,
-              );
-              if (state.message.isNotEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      state.message,
-                      textDirection: TextDirection.rtl,
-                    ),
-                  ),
-                );
-              }
-            }
-          },
-        ),
-      ],
-      child: Scaffold(
-        backgroundColor: _canvas,
-        appBar: AppBar(
-          backgroundColor: _canvas,
-          title: Text(titles[_tabIndex], textDirection: TextDirection.rtl),
-          actions: [
-            IconButton(
-              tooltip: 'تحديث',
-              onPressed: _refreshCurrent,
-              icon: const Icon(Icons.refresh_rounded),
-            ),
-            IconButton(
-              tooltip: 'تسجيل الخروج',
-              onPressed: () => context.read<AuthCubit>().logout(),
-              icon: const Icon(Icons.logout_rounded),
-            ),
-            const SizedBox(width: 8),
-          ],
-        ),
-        body: IndexedStack(
-          index: _tabIndex,
-          children: [
-            _CatalogTab(onRefresh: _refreshCatalog),
-            const _CartTab(),
-            const _OrdersTab(),
-          ],
-        ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _tabIndex,
-          onDestinationSelected: (index) {
-            setState(() => _tabIndex = index);
-            if (index == 0) {
-              _refreshCatalog();
-            } else if (index == 1) {
-              context.read<StoreCubit>().loadCart();
-            } else if (index == 2) {
-              context.read<StoreCubit>().loadOrders();
-            }
-          },
-          destinations: [
-            const NavigationDestination(
-              icon: Icon(Icons.storefront_outlined),
-              selectedIcon: Icon(Icons.storefront_rounded),
-              label: 'المتجر',
-            ),
-            NavigationDestination(
-              icon: const _CartNavigationIcon(
-                icon: Icons.shopping_bag_outlined,
-              ),
-              selectedIcon: const _CartNavigationIcon(
-                icon: Icons.shopping_bag_rounded,
-              ),
-              label: 'السلة',
-            ),
-            const NavigationDestination(
-              icon: Icon(Icons.receipt_long_outlined),
-              selectedIcon: Icon(Icons.receipt_long_rounded),
-              label: 'طلباتي',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _refreshCurrent() {
-    final store = context.read<StoreCubit>();
-    if (_tabIndex == 1) {
-      store.loadCart();
-    } else if (_tabIndex == 2) {
-      store.loadOrders();
-    } else {
-      _refreshCatalog();
-    }
-  }
-
-  Future<void> _refreshCatalog() {
-    final inProgress = _catalogRefreshInProgress;
-    if (inProgress != null) return inProgress;
-
-    final store = context.read<StoreCubit>();
-    final refresh = _performCatalogRefresh(store);
-    _catalogRefreshInProgress = refresh;
-    return refresh.whenComplete(() {
-      if (identical(_catalogRefreshInProgress, refresh)) {
-        _catalogRefreshInProgress = null;
-      }
-    });
-  }
-
-  Future<void> _performCatalogRefresh(StoreCubit store) async {
-    await Future.wait([
-      store.loadCategories(),
-      store.loadProducts(
-        categoryUuid: store.state.selectedCategoryUuid,
-        refresh: true,
-      ),
-    ]);
-  }
-}
+part of '../screen/store_screen.dart';
 
 class _CartNavigationIcon extends StatelessWidget {
   final IconData icon;
@@ -199,13 +21,13 @@ class _CartNavigationIcon extends StatelessWidget {
                 alignment: Alignment.center,
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 decoration: const BoxDecoration(
-                  color: Color(0xFFE85D4A),
+                  color: AppColors.error,
                   shape: BoxShape.circle,
                 ),
                 child: Text(
                   '${state.cartItems.length}',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.surface,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                   ),
@@ -239,7 +61,9 @@ class _CatalogTab extends StatelessWidget {
                   height: 66,
                   child: state.loadingCategories && state.categories.isEmpty
                       ? const Center(
-                          child: CircularProgressIndicator(color: _brand),
+                          child: CircularProgressIndicator(
+                            color: AppColors.primary,
+                          ),
                         )
                       : ListView(
                           padding: const EdgeInsetsDirectional.fromSTEB(
@@ -252,7 +76,7 @@ class _CatalogTab extends StatelessWidget {
                           children: [
                             _CategoryChip(
                               label: 'الكل',
-                              selected: state.selectedCategoryUuid == null,
+                              selected: state.selectedCategorySlug == null,
                               onTap: () =>
                                   context.read<StoreCubit>().loadProducts(),
                             ),
@@ -260,10 +84,10 @@ class _CatalogTab extends StatelessWidget {
                               (category) => _CategoryChip(
                                 label: category.name,
                                 selected:
-                                    category.uuid == state.selectedCategoryUuid,
+                                    category.slug == state.selectedCategorySlug,
                                 onTap: () => context
                                     .read<StoreCubit>()
-                                    .loadProducts(categoryUuid: category.uuid),
+                                    .loadProducts(categorySlug: category.slug),
                               ),
                             ),
                           ],
@@ -276,7 +100,9 @@ class _CatalogTab extends StatelessWidget {
                     ? const SliverFillRemaining(
                         hasScrollBody: false,
                         child: Center(
-                          child: CircularProgressIndicator(color: _brand),
+                          child: CircularProgressIndicator(
+                            color: AppColors.primary,
+                          ),
                         ),
                       )
                     : state.products.isEmpty
@@ -289,29 +115,17 @@ class _CatalogTab extends StatelessWidget {
                         ),
                       )
                     : SliverGrid(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            if (index == state.products.length) {
-                              return _LoadMoreCard(
-                                loading: state.loadingProducts,
-                                onTap: context
-                                    .read<StoreCubit>()
-                                    .loadMoreProducts,
-                              );
-                            }
-                            final product = state.products[index];
-                            return _ProductCard(
-                              product: product,
-                              onTap: () =>
-                                  _showProductDetails(context, product),
-                            );
-                          },
-                          childCount:
-                              state.products.length +
-                              (state.productPage < state.productLastPage
-                                  ? 1
-                                  : 0),
-                        ),
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final product = state.products[index];
+                          return _ProductCard(
+                            product: product,
+                            isFavorite: state.isFavorite(product.id),
+                            onToggleFavorite: () => context
+                                .read<StoreCubit>()
+                                .toggleFavorite(product),
+                            onTap: () => _showProductDetails(context, product),
+                          );
+                        }, childCount: state.products.length),
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 2,
@@ -328,15 +142,20 @@ class _CatalogTab extends StatelessWidget {
     );
   }
 
-  void _showProductDetails(BuildContext context, StoreProduct product) {
+  Future<void> _showProductDetails(
+    BuildContext context,
+    StoreProduct product,
+  ) async {
     final storeCubit = context.read<StoreCubit>();
+    final details = await storeCubit.loadProductDetails(product.slug);
+    if (!context.mounted || details == null) return;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => BlocProvider.value(
         value: storeCubit,
-        child: _ProductDetailsSheet(product: product),
+        child: _ProductDetailsSheet(product: details),
       ),
     );
   }
@@ -351,7 +170,7 @@ class _WelcomeBanner extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         gradient: const LinearGradient(
-          colors: [Color(0xFF176B5B), Color(0xFF2E9279)],
+          colors: [AppColors.primary, AppColors.primaryLight],
           begin: AlignmentDirectional.topStart,
           end: AlignmentDirectional.bottomEnd,
         ),
@@ -366,7 +185,7 @@ class _WelcomeBanner extends StatelessWidget {
                   'تسوّق براحة',
                   textDirection: TextDirection.rtl,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.surface,
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
                   ),
@@ -375,7 +194,7 @@ class _WelcomeBanner extends StatelessWidget {
                 Text(
                   'اكتشف مجموعتنا واختر ما يناسبك',
                   textDirection: TextDirection.rtl,
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                  style: TextStyle(color: AppColors.whiteSubtle, fontSize: 13),
                 ),
               ],
             ),
@@ -384,12 +203,12 @@ class _WelcomeBanner extends StatelessWidget {
             width: 58,
             height: 58,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.16),
+              color: AppColors.whiteOverlay,
               borderRadius: BorderRadius.circular(19),
             ),
             child: const Icon(
               Icons.shopping_basket_rounded,
-              color: Colors.white,
+              color: AppColors.surface,
               size: 31,
             ),
           ),
@@ -418,11 +237,13 @@ class _CategoryChip extends StatelessWidget {
         label: Text(label, textDirection: TextDirection.rtl),
         selected: selected,
         onSelected: (_) => onTap(),
-        selectedColor: _brand,
-        backgroundColor: Colors.white,
-        side: BorderSide(color: selected ? _brand : const Color(0xFFE2E9E6)),
+        selectedColor: AppColors.primary,
+        backgroundColor: AppColors.surface,
+        side: BorderSide(
+          color: selected ? AppColors.primary : AppColors.border,
+        ),
         labelStyle: TextStyle(
-          color: selected ? Colors.white : _ink,
+          color: selected ? AppColors.surface : AppColors.ink,
           fontWeight: FontWeight.w600,
         ),
         showCheckmark: false,
@@ -432,16 +253,150 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
+class _FavoritesTab extends StatelessWidget {
+  const _FavoritesTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<StoreCubit, StoreState>(
+      builder: (context, state) {
+        if (state.loadingFavorites && state.favorites.isEmpty) {
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
+        }
+        if (state.favorites.isEmpty) {
+          return const _EmptyState(
+            icon: Icons.favorite_border_rounded,
+            title: 'لا توجد منتجات في المفضلة',
+            subtitle: 'احفظ المنتجات التي تعجبك لتجدها هنا.',
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: context.read<StoreCubit>().loadFavorites,
+          child: ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: state.favorites.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final item = state.favorites[index];
+              return Material(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(18),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: () => _openProductDetails(context, item.product),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(13),
+                          child: SizedBox(
+                            width: 68,
+                            height: 68,
+                            child: _ProductImage(url: item.product.image),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.product.categoryName ?? '',
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 11,
+                                ),
+                              ),
+                              Text(
+                                item.product.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: AppColors.ink,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              Text(
+                                '${_price(item.product.price)} EGP',
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              if (item.product.publisher != null)
+                                Text(
+                                  'بواسطة ${item.product.publisher!.displayName}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: AppColors.muted,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'إزالة من المفضلة',
+                          onPressed: () => context
+                              .read<StoreCubit>()
+                              .toggleFavorite(item.product),
+                          icon: const Icon(
+                            Icons.favorite_rounded,
+                            color: AppColors.error,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openProductDetails(
+    BuildContext context,
+    StoreProduct product,
+  ) async {
+    final cubit = context.read<StoreCubit>();
+    final details = await cubit.loadProductDetails(product.slug);
+    if (!context.mounted || details == null) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => BlocProvider.value(
+        value: cubit,
+        child: _ProductDetailsSheet(product: details),
+      ),
+    );
+  }
+}
+
 class _ProductCard extends StatelessWidget {
   final StoreProduct product;
   final VoidCallback onTap;
+  final bool isFavorite;
+  final VoidCallback onToggleFavorite;
 
-  const _ProductCard({required this.product, required this.onTap});
+  const _ProductCard({
+    required this.product,
+    required this.onTap,
+    required this.isFavorite,
+    required this.onToggleFavorite,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
@@ -452,9 +407,45 @@ class _ProductCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(15),
-                  child: _ProductImage(url: product.image),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(15),
+                        child: _ProductImage(url: product.image),
+                      ),
+                    ),
+                    PositionedDirectional(
+                      top: 8,
+                      end: 8,
+                      child: IconButton(
+                        tooltip: isFavorite
+                            ? 'إزالة من المفضلة'
+                            : 'إضافة إلى المفضلة',
+                        onPressed: onToggleFavorite,
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.surface.withValues(
+                            alpha: 0.9,
+                          ),
+                          minimumSize: const Size(34, 34),
+                        ),
+                        icon: Icon(
+                          isFavorite
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
+                          color: isFavorite ? AppColors.error : AppColors.muted,
+                          size: 19,
+                        ),
+                      ),
+                    ),
+                    if (!product.isInStock)
+                      const Center(
+                        child: Chip(
+                          label: Text('نفد المخزون'),
+                          backgroundColor: AppColors.surface,
+                        ),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(height: 11),
@@ -465,7 +456,7 @@ class _ProductCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: _brand,
+                    color: AppColors.primary,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -477,12 +468,21 @@ class _ProductCard extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: _ink,
+                  color: AppColors.ink,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   height: 1.3,
                 ),
               ),
+              if (product.publisher != null) ...[
+                const SizedBox(height: 3),
+                Text(
+                  'بواسطة ${product.publisher!.displayName}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: AppColors.muted, fontSize: 10),
+                ),
+              ],
               const SizedBox(height: 9),
               Row(
                 children: [
@@ -491,7 +491,7 @@ class _ProductCard extends StatelessWidget {
                       _price(product.price),
                       textDirection: TextDirection.ltr,
                       style: const TextStyle(
-                        color: _brand,
+                        color: AppColors.primary,
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                       ),
@@ -501,12 +501,12 @@ class _ProductCard extends StatelessWidget {
                     width: 34,
                     height: 34,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE9F4F0),
+                      color: AppColors.primaryContainer,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
                       Icons.arrow_forward_rounded,
-                      color: _brand,
+                      color: AppColors.primary,
                       size: 18,
                     ),
                   ),
@@ -516,35 +516,6 @@ class _ProductCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _LoadMoreCard extends StatelessWidget {
-  final bool loading;
-  final VoidCallback onTap;
-
-  const _LoadMoreCard({required this.loading, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: loading ? null : onTap,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: _brand,
-        side: const BorderSide(color: Color(0xFFB8D7CD)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      ),
-      child: loading
-          ? const CircularProgressIndicator(color: _brand)
-          : const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.expand_more_rounded, size: 30),
-                SizedBox(height: 7),
-                Text('عرض المزيد'),
-              ],
-            ),
     );
   }
 }
@@ -559,7 +530,7 @@ class _ProductDetailsSheet extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       decoration: const BoxDecoration(
-        color: _canvas,
+        color: AppColors.canvas,
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: SafeArea(
@@ -573,7 +544,7 @@ class _ProductDetailsSheet extends StatelessWidget {
                 width: 42,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.black26,
+                  color: AppColors.dragHandle,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -591,7 +562,7 @@ class _ProductDetailsSheet extends StatelessWidget {
               product.name,
               textDirection: TextDirection.rtl,
               style: const TextStyle(
-                color: _ink,
+                color: AppColors.ink,
                 fontSize: 21,
                 fontWeight: FontWeight.w800,
               ),
@@ -602,9 +573,32 @@ class _ProductDetailsSheet extends StatelessWidget {
                 product.categoryName!,
                 textDirection: TextDirection.rtl,
                 style: const TextStyle(
-                  color: _brand,
+                  color: AppColors.primary,
                   fontWeight: FontWeight.w600,
                 ),
+              ),
+            ],
+            if (product.publisher != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.storefront_outlined,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'الناشر: ${product.publisher!.displayName}',
+                      textDirection: TextDirection.rtl,
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
             const SizedBox(height: 12),
@@ -613,9 +607,31 @@ class _ProductDetailsSheet extends StatelessWidget {
                   ? 'لا يتوفر وصف إضافي لهذا المنتج.'
                   : product.description,
               textDirection: TextDirection.rtl,
-              style: const TextStyle(color: Color(0xFF61706B), height: 1.6),
+              style: const TextStyle(color: AppColors.muted, height: 1.6),
             ),
             const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: product.isInStock
+                    ? AppColors.successContainer
+                    : AppColors.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                product.isInStock
+                    ? 'متوفر في المخزون: ${product.quantity}'
+                    : 'نفد المخزون',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: product.isInStock
+                      ? AppColors.success
+                      : AppColors.error,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -623,7 +639,7 @@ class _ProductDetailsSheet extends StatelessWidget {
                     _price(product.price),
                     textDirection: TextDirection.ltr,
                     style: const TextStyle(
-                      color: _brand,
+                      color: AppColors.primary,
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
                     ),
@@ -631,16 +647,18 @@ class _ProductDetailsSheet extends StatelessWidget {
                 ),
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: _brand,
+                    backgroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 18,
                       vertical: 14,
                     ),
                   ),
-                  onPressed: () {
-                    context.read<StoreCubit>().addToCart(product);
-                    Navigator.pop(context);
-                  },
+                  onPressed: product.isInStock
+                      ? () {
+                          context.read<StoreCubit>().addToCart(product);
+                          Navigator.pop(context);
+                        }
+                      : null,
                   icon: const Icon(Icons.add_shopping_cart_rounded),
                   label: const Text('أضف إلى السلة'),
                 ),
@@ -678,9 +696,13 @@ class _ImagePlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFFE9F1EE),
+      color: AppColors.primaryContainer,
       child: const Center(
-        child: Icon(Icons.inventory_2_outlined, color: _brand, size: 42),
+        child: Icon(
+          Icons.inventory_2_outlined,
+          color: AppColors.primary,
+          size: 42,
+        ),
       ),
     );
   }
@@ -694,7 +716,9 @@ class _CartTab extends StatelessWidget {
     return BlocBuilder<StoreCubit, StoreState>(
       builder: (context, state) {
         if (state.loadingCart && state.cartItems.isEmpty) {
-          return const Center(child: CircularProgressIndicator(color: _brand));
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
         }
         if (state.cartItems.isEmpty) {
           return const _EmptyState(
@@ -717,11 +741,11 @@ class _CartTab extends StatelessWidget {
             Container(
               padding: const EdgeInsets.fromLTRB(20, 17, 20, 18),
               decoration: const BoxDecoration(
-                color: Colors.white,
+                color: AppColors.surface,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0x10000000),
+                    color: AppColors.shadow,
                     blurRadius: 16,
                     offset: Offset(0, -4),
                   ),
@@ -738,7 +762,7 @@ class _CartTab extends StatelessWidget {
                             'الإجمالي',
                             textDirection: TextDirection.rtl,
                             style: TextStyle(
-                              color: _ink,
+                              color: AppColors.ink,
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                             ),
@@ -748,7 +772,7 @@ class _CartTab extends StatelessWidget {
                           _price(state.cartTotal),
                           textDirection: TextDirection.ltr,
                           style: const TextStyle(
-                            color: _brand,
+                            color: AppColors.primary,
                             fontSize: 19,
                             fontWeight: FontWeight.w800,
                           ),
@@ -760,35 +784,22 @@ class _CartTab extends StatelessWidget {
                       width: double.infinity,
                       child: FilledButton(
                         style: FilledButton.styleFrom(
-                          backgroundColor: _brand,
+                          backgroundColor: AppColors.primary,
                           padding: const EdgeInsets.symmetric(vertical: 15),
                         ),
                         onPressed: state.busy
                             ? null
-                            : () => context.read<StoreCubit>().placeOrder(),
+                            : () => _startCheckout(context),
                         child: state.busy
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: Colors.white,
+                                  color: AppColors.surface,
                                 ),
                               )
                             : const Text('تأكيد الطلب'),
-                      ),
-                    ),
-                    Align(
-                      alignment: AlignmentDirectional.centerEnd,
-                      child: TextButton.icon(
-                        onPressed: state.busy
-                            ? null
-                            : () => _confirmClearCart(context),
-                        icon: const Icon(
-                          Icons.delete_outline_rounded,
-                          size: 18,
-                        ),
-                        label: const Text('إفراغ السلة'),
                       ),
                     ),
                   ],
@@ -801,30 +812,162 @@ class _CartTab extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmClearCart(BuildContext context) async {
-    final shouldClear = await showDialog<bool>(
+  Future<void> _startCheckout(BuildContext context) async {
+    final checkout = await showDialog<CheckoutDetails>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('إفراغ السلة؟', textDirection: TextDirection.rtl),
-        content: const Text(
-          'سيتم حذف جميع المنتجات الموجودة في السلة.',
-          textDirection: TextDirection.rtl,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('إلغاء'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('إفراغ'),
-          ),
-        ],
-      ),
+      builder: (_) => const _CheckoutDialog(),
     );
-    if (shouldClear == true && context.mounted) {
-      await context.read<StoreCubit>().clearCart();
+    if (checkout == null || !context.mounted) return;
+    await context.read<StoreCubit>().placeOrder(
+      address: checkout.address,
+      latitude: checkout.latitude,
+      longitude: checkout.longitude,
+      paymentMethod: checkout.paymentMethod,
+    );
+  }
+}
+
+class CheckoutDetails {
+  final String address;
+  final double? latitude;
+  final double? longitude;
+  final String paymentMethod;
+
+  const CheckoutDetails({
+    required this.address,
+    required this.latitude,
+    required this.longitude,
+    required this.paymentMethod,
+  });
+}
+
+class _CheckoutDialog extends StatefulWidget {
+  const _CheckoutDialog();
+
+  @override
+  State<_CheckoutDialog> createState() => _CheckoutDialogState();
+}
+
+class _CheckoutDialogState extends State<_CheckoutDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _addressController = TextEditingController();
+  final _latitudeController = TextEditingController();
+  final _longitudeController = TextEditingController();
+  String _paymentMethod = 'cash';
+
+  @override
+  void dispose() {
+    _addressController.dispose();
+    _latitudeController.dispose();
+    _longitudeController.dispose();
+    super.dispose();
+  }
+
+  double? _coordinate(String value) =>
+      value.trim().isEmpty ? null : double.tryParse(value.trim());
+
+  String? _validateCoordinate(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    if (double.tryParse(value.trim()) == null) {
+      return 'أدخل إحداثية صحيحة';
     }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('بيانات التوصيل', textDirection: TextDirection.rtl),
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _addressController,
+                textDirection: TextDirection.rtl,
+                decoration: const InputDecoration(labelText: 'عنوان التوصيل'),
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'أدخل عنوان التوصيل'
+                    : null,
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _latitudeController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                  signed: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'خط العرض (اختياري)',
+                ),
+                validator: _validateCoordinate,
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _longitudeController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                  signed: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'خط الطول (اختياري)',
+                ),
+                validator: _validateCoordinate,
+              ),
+              const SizedBox(height: 12),
+              const Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  'طريقة الدفع',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(
+                    value: 'cash',
+                    label: Text('نقداً'),
+                    icon: Icon(Icons.payments_outlined),
+                  ),
+                  ButtonSegment(
+                    value: 'card',
+                    label: Text('بطاقة'),
+                    icon: Icon(Icons.credit_card_rounded),
+                  ),
+                ],
+                selected: {_paymentMethod},
+                onSelectionChanged: (selection) =>
+                    setState(() => _paymentMethod = selection.first),
+                showSelectedIcon: false,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('إلغاء'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (!_formKey.currentState!.validate()) return;
+            Navigator.pop(
+              context,
+              CheckoutDetails(
+                address: _addressController.text.trim(),
+                latitude: _coordinate(_latitudeController.text),
+                longitude: _coordinate(_longitudeController.text),
+                paymentMethod: _paymentMethod,
+              ),
+            );
+          },
+          child: const Text('متابعة'),
+        ),
+      ],
+    );
   }
 }
 
@@ -839,7 +982,7 @@ class _CartItemCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(19),
       ),
       child: Row(
@@ -863,7 +1006,7 @@ class _CartItemCard extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: _ink,
+                    color: AppColors.ink,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -872,30 +1015,15 @@ class _CartItemCard extends StatelessWidget {
                   _price(item.subtotal),
                   textDirection: TextDirection.ltr,
                   style: const TextStyle(
-                    color: _brand,
+                    color: AppColors.primary,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _QuantityButton(
-                      icon: Icons.remove,
-                      onTap: item.quantity > 1
-                          ? () => store.updateCartItem(item, item.quantity - 1)
-                          : null,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Text('${item.quantity}'),
-                    ),
-                    _QuantityButton(
-                      icon: Icons.add,
-                      onTap: () =>
-                          store.updateCartItem(item, item.quantity + 1),
-                    ),
-                  ],
+                Text(
+                  'الكمية: ${item.quantity}',
+                  textDirection: TextDirection.rtl,
+                  style: const TextStyle(color: AppColors.muted, fontSize: 12),
                 ),
               ],
             ),
@@ -905,34 +1033,10 @@ class _CartItemCard extends StatelessWidget {
             onPressed: () => store.removeCartItem(item),
             icon: const Icon(
               Icons.delete_outline_rounded,
-              color: Colors.redAccent,
+              color: AppColors.error,
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _QuantityButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  const _QuantityButton({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        width: 27,
-        height: 27,
-        decoration: BoxDecoration(
-          color: const Color(0xFFE9F4F0),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, size: 16, color: _brand),
       ),
     );
   }
@@ -946,7 +1050,9 @@ class _OrdersTab extends StatelessWidget {
     return BlocBuilder<StoreCubit, StoreState>(
       builder: (context, state) {
         if (state.loadingOrders && state.orders.isEmpty) {
-          return const Center(child: CircularProgressIndicator(color: _brand));
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
         }
         if (state.orders.isEmpty) {
           return const _EmptyState(
@@ -964,7 +1070,13 @@ class _OrdersTab extends StatelessWidget {
             itemBuilder: (context, index) => _OrderCard(
               order: state.orders[index],
               onTap: () => _showOrderDetails(context, state.orders[index]),
-              onDelete: () => _confirmDeleteOrder(context, state.orders[index]),
+              onPay:
+                  state.orders[index].paymentMethod == 'card' &&
+                      state.orders[index].status.toLowerCase() == 'pending'
+                  ? () => context.read<StoreCubit>().payForOrder(
+                      state.orders[index],
+                    )
+                  : null,
             ),
           ),
         );
@@ -974,7 +1086,7 @@ class _OrdersTab extends StatelessWidget {
 
   Future<void> _showOrderDetails(BuildContext context, StoreOrder order) async {
     final details = await context.read<StoreCubit>().loadOrderDetails(
-      order.uuid,
+      order.code,
     );
     if (!context.mounted || details == null) return;
     await showDialog<void>(
@@ -989,9 +1101,12 @@ class _OrdersTab extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('رقم الطلب: ${details.uuid}'),
+                Text('رقم الطلب: ${details.code}'),
                 const SizedBox(height: 8),
                 Text('الحالة: ${_statusLabel(details.status)}'),
+                Text('طريقة الدفع: ${_paymentLabel(details.paymentMethod)}'),
+                if (details.address.isNotEmpty)
+                  Text('العنوان: ${details.address}'),
                 const Divider(height: 24),
                 ...details.items.map(
                   (item) => Padding(
@@ -1005,7 +1120,7 @@ class _OrdersTab extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        Text(_price(item.subtotal)),
+                        Text(_price(item.totalPrice)),
                       ],
                     ),
                   ),
@@ -1028,52 +1143,23 @@ class _OrdersTab extends StatelessWidget {
       ),
     );
   }
-
-  Future<void> _confirmDeleteOrder(
-    BuildContext context,
-    StoreOrder order,
-  ) async {
-    final shouldDelete = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('حذف الطلب؟', textDirection: TextDirection.rtl),
-        content: const Text(
-          'لا يمكن التراجع عن حذف الطلب.',
-          textDirection: TextDirection.rtl,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('إلغاء'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('حذف'),
-          ),
-        ],
-      ),
-    );
-    if (shouldDelete == true && context.mounted) {
-      await context.read<StoreCubit>().deleteOrder(order);
-    }
-  }
 }
 
 class _OrderCard extends StatelessWidget {
   final StoreOrder order;
   final VoidCallback onTap;
-  final VoidCallback onDelete;
+  final VoidCallback? onPay;
 
   const _OrderCard({
     required this.order,
     required this.onTap,
-    required this.onDelete,
+    required this.onPay,
   });
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppColors.surface,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
@@ -1086,10 +1172,13 @@ class _OrderCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE9F4F0),
+                  color: AppColors.primaryContainer,
                   borderRadius: BorderRadius.circular(15),
                 ),
-                child: const Icon(Icons.receipt_long_rounded, color: _brand),
+                child: const Icon(
+                  Icons.receipt_long_rounded,
+                  color: AppColors.primary,
+                ),
               ),
               const SizedBox(width: 13),
               Expanded(
@@ -1097,9 +1186,9 @@ class _OrderCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'طلب #${order.uuid.substring(0, order.uuid.length > 8 ? 8 : order.uuid.length)}',
+                      'طلب #${order.code}',
                       style: const TextStyle(
-                        color: _ink,
+                        color: AppColors.ink,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -1108,7 +1197,7 @@ class _OrderCard extends StatelessWidget {
                       '${_statusLabel(order.status)} · ${order.items.length} منتجات',
                       textDirection: TextDirection.rtl,
                       style: const TextStyle(
-                        color: Color(0xFF718079),
+                        color: AppColors.muted,
                         fontSize: 12,
                       ),
                     ),
@@ -1122,20 +1211,12 @@ class _OrderCard extends StatelessWidget {
                     _price(order.totalPrice),
                     textDirection: TextDirection.ltr,
                     style: const TextStyle(
-                      color: _brand,
+                      color: AppColors.primary,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    tooltip: 'حذف الطلب',
-                    onPressed: onDelete,
-                    icon: const Icon(
-                      Icons.delete_outline_rounded,
-                      color: Colors.redAccent,
-                      size: 20,
-                    ),
-                  ),
+                  if (onPay != null)
+                    TextButton(onPressed: onPay, child: const Text('دفع الآن')),
                 ],
               ),
             ],
@@ -1169,17 +1250,17 @@ class _EmptyState extends StatelessWidget {
               width: 84,
               height: 84,
               decoration: BoxDecoration(
-                color: const Color(0xFFE9F4F0),
+                color: AppColors.primaryContainer,
                 borderRadius: BorderRadius.circular(28),
               ),
-              child: Icon(icon, color: _brand, size: 38),
+              child: Icon(icon, color: AppColors.primary, size: 38),
             ),
             const SizedBox(height: 18),
             Text(
               title,
               textDirection: TextDirection.rtl,
               style: const TextStyle(
-                color: _ink,
+                color: AppColors.ink,
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
               ),
@@ -1189,7 +1270,7 @@ class _EmptyState extends StatelessWidget {
               subtitle,
               textDirection: TextDirection.rtl,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Color(0xFF718079), height: 1.5),
+              style: const TextStyle(color: AppColors.muted, height: 1.5),
             ),
           ],
         ),
@@ -1212,5 +1293,16 @@ String _statusLabel(String status) {
       return 'قيد التجهيز';
     default:
       return status;
+  }
+}
+
+String _paymentLabel(String method) {
+  switch (method.toLowerCase()) {
+    case 'card':
+      return 'بطاقة';
+    case 'cash':
+      return 'نقداً عند الاستلام';
+    default:
+      return method;
   }
 }

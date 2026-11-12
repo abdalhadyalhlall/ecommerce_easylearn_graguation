@@ -1,13 +1,9 @@
 import 'package:clean_arch_session/core/routes/routes.dart';
-import 'package:clean_arch_session/core/widgets/app_button.dart';
+import 'package:clean_arch_session/core/theme/app_colors.dart';
 import 'package:clean_arch_session/feature/auth/presentation/cubit/auth_cubit.dart';
+import 'package:clean_arch_session/core/widgets/app_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
-const _orange = Color(0xFFFF6A00);
-const _ink = Color(0xFF20232B);
-const _muted = Color(0xFF85858A);
-const _cream = Color(0xFFFFF9F4);
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -46,7 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: _cream,
+        backgroundColor: AppColors.canvas,
         body: SafeArea(
           child: BlocConsumer<AuthCubit, AuthState>(
             listener: (context, state) {
@@ -75,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             'Welcome back',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: _ink,
+                              color: AppColors.ink,
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
                             ),
@@ -84,7 +80,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           const Text(
                             'Sign in to continue shopping',
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: _muted, fontSize: 13),
+                            style: TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 13,
+                            ),
                           ),
                           const SizedBox(height: 28),
                           _AuthField(
@@ -118,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ? Icons.visibility_outlined
                                     : Icons.visibility_off_outlined,
                                 size: 19,
-                                color: _muted,
+                                color: AppColors.muted,
                               ),
                             ),
                             validator: (value) => (value?.isEmpty ?? true)
@@ -130,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           AppButton(
                             text: 'Login',
                             isLoading: state is AuthLoading,
-                            backgroundColor: _orange,
+                            backgroundColor: AppColors.primary,
                             onPressed: _login,
                           ),
                           const SizedBox(height: 10),
@@ -145,14 +144,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               TextSpan(
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: _muted,
+                                  color: AppColors.muted,
                                 ),
                                 children: [
                                   TextSpan(text: "Don't have an account? "),
                                   TextSpan(
                                     text: 'Create Account',
                                     style: TextStyle(
-                                      color: _orange,
+                                      color: AppColors.primary,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
@@ -186,13 +185,21 @@ class _ShopMark extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: const [
-          BoxShadow(color: Color(0x12000000), blurRadius: 16, offset: Offset(0, 5)),
+          BoxShadow(
+            color: AppColors.strongShadow,
+            blurRadius: 16,
+            offset: Offset(0, 5),
+          ),
         ],
       ),
-      child: const Icon(Icons.shopping_bag_rounded, color: _orange, size: 42),
+      child: const Icon(
+        Icons.shopping_bag_rounded,
+        color: AppColors.primary,
+        size: 42,
+      ),
     );
   }
 }
@@ -229,21 +236,21 @@ class _AuthField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         suffixIcon: suffix,
-        labelStyle: const TextStyle(fontSize: 12, color: _muted),
+        labelStyle: const TextStyle(fontSize: 12, color: AppColors.muted),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: AppColors.surface,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFECE7E3)),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFECE7E3)),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _orange),
+          borderSide: const BorderSide(color: AppColors.primary),
         ),
       ),
     );

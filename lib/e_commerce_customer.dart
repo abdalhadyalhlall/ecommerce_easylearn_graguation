@@ -1,5 +1,6 @@
 
 import 'package:clean_arch_session/core/routes/app_router.dart';
+import 'package:clean_arch_session/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class MyApp extends StatelessWidget {
@@ -9,44 +10,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const brand = Color(0xFFFF6A00);
     return MaterialApp(
       title: 'متجر',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: brand,
-          primary: brand,
-          surface: const Color(0xFFFFF9F4),
-        ),
-        scaffoldBackgroundColor: const Color(0xFFFFF9F4),
-        appBarTheme: const AppBarTheme(
-          centerTitle: false,
-          elevation: 0,
-          foregroundColor: Color(0xFF20232B),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 16,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: const BorderSide(color: Color(0xFFE2E9E6)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: const BorderSide(color: Color(0xFFE2E9E6)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: const BorderSide(color: brand, width: 1.5),
-          ),
-        ),
-      ),
+      theme: AppTheme.light,
       builder: (context, child) => Directionality(
         textDirection: TextDirection.rtl,
         child: child ?? const SizedBox.shrink(),

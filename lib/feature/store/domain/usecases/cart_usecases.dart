@@ -8,16 +8,14 @@ class CartUseCases {
 
   Future<List<CartItem>> getItems() => _repository.getCartItems();
 
-  Future<void> add(String productUuid, {int quantity = 1}) {
-    return _repository.addToCart(productUuid, quantity: quantity);
+  Future<List<CartItem>> getCachedItems() =>
+      _repository.getCachedCartItems();
+
+  Future<List<CartItem>> add(int productId, int quantity) {
+    return _repository.addToCart(productId, quantity);
   }
 
-  Future<void> update(String uuid, int quantity) {
-    return _repository.updateCartItem(uuid, quantity);
+  Future<List<CartItem>> remove(int productId) {
+    return _repository.removeCartItem(productId);
   }
-
-  Future<void> remove(String uuid) => _repository.removeCartItem(uuid);
-
-  Future<void> clear() => _repository.clearCart();
 }
-

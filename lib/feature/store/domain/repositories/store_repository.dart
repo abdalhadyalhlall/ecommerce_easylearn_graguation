@@ -1,28 +1,37 @@
 import 'package:clean_arch_session/feature/store/domain/entities/store_entities.dart';
 
 abstract interface class StoreRepository {
-  Future<List<StoreCategory>?> getCategories();
+  Future<List<StoreCategory>> getCategories();
 
-  Future<StoreProductPage?> getProducts({
-    String? categoryUuid,
-    int page = 1,
-  });
+  Future<List<StoreProduct>> getProducts({String? categorySlug});
+
+  Future<StoreProduct> getProductDetails(String slug);
+
+  Future<List<FavoriteItem>> getFavorites();
+
+  Future<void> addFavorite(int productId);
+
+  Future<void> removeFavorite(int productId);
 
   Future<List<CartItem>> getCartItems();
 
-  Future<void> addToCart(String productUuid, {int quantity = 1});
+  Future<List<CartItem>> getCachedCartItems();
 
-  Future<void> updateCartItem(String uuid, int quantity);
+  Future<List<CartItem>> addToCart(int productId, int quantity);
 
-  Future<void> removeCartItem(String uuid);
+  Future<List<CartItem>> removeCartItem(int productId);
 
-  Future<void> clearCart();
-
-  Future<void> placeOrder();
+  Future<StoreOrder> placeOrder({
+    required List<CartItem> items,
+    required String address,
+    required double? latitude,
+    required double? longitude,
+    required String paymentMethod,
+  });
 
   Future<List<StoreOrder>> getOrders();
 
-  Future<StoreOrder> getOrder(String uuid);
+  Future<StoreOrder> getOrder(String code);
 
-  Future<void> deleteOrder(String uuid);
+  Future<String> payOrder(String code);
 }

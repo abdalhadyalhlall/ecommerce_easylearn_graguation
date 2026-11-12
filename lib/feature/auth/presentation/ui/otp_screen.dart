@@ -1,14 +1,10 @@
 import 'package:clean_arch_session/core/routes/routes.dart';
-import 'package:clean_arch_session/core/widgets/app_button.dart';
+import 'package:clean_arch_session/core/theme/app_colors.dart';
 import 'package:clean_arch_session/feature/auth/presentation/cubit/auth_cubit.dart';
+import 'package:clean_arch_session/core/widgets/app_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
-const _orange = Color(0xFFFF6A00);
-const _ink = Color(0xFF20232B);
-const _muted = Color(0xFF85858A);
-const _cream = Color(0xFFFFF9F4);
 
 class OtpScreen extends StatefulWidget {
   final String email;
@@ -21,7 +17,10 @@ class OtpScreen extends StatefulWidget {
 
 class _OtpScreenState extends State<OtpScreen> {
   static const _otpLength = 6;
-  final _controllers = List.generate(_otpLength, (_) => TextEditingController());
+  final _controllers = List.generate(
+    _otpLength,
+    (_) => TextEditingController(),
+  );
   final _focusNodes = List.generate(_otpLength, (_) => FocusNode());
 
   @override
@@ -35,7 +34,8 @@ class _OtpScreenState extends State<OtpScreen> {
     super.dispose();
   }
 
-  String get _otpCode => _controllers.map((controller) => controller.text).join();
+  String get _otpCode =>
+      _controllers.map((controller) => controller.text).join();
 
   void _onDigitChanged(int index, String value) {
     if (value.length > 1) {
@@ -60,10 +60,7 @@ class _OtpScreenState extends State<OtpScreen> {
       );
       return;
     }
-    context.read<AuthCubit>().verifyOtp(
-      email: widget.email,
-      otpCode: _otpCode,
-    );
+    context.read<AuthCubit>().verifyOtp(email: widget.email, otpCode: _otpCode);
   }
 
   @override
@@ -71,9 +68,9 @@ class _OtpScreenState extends State<OtpScreen> {
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: _cream,
+        backgroundColor: AppColors.canvas,
         appBar: AppBar(
-          backgroundColor: _cream,
+          backgroundColor: AppColors.canvas,
           leading: IconButton(
             tooltip: 'Back',
             icon: const Icon(Icons.arrow_back_rounded, size: 20),
@@ -94,13 +91,13 @@ class _OtpScreenState extends State<OtpScreen> {
                   (route) => false,
                 );
               } else if (state is AuthOtpResent) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(state.message)),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(state.message)));
               } else if (state is AuthFailure) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(state.message)),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(state.message)));
               }
             },
             builder: (context, state) {
@@ -117,12 +114,12 @@ class _OtpScreenState extends State<OtpScreen> {
                             width: 58,
                             height: 58,
                             decoration: const BoxDecoration(
-                              color: Color(0xFFFFF0E3),
+                              color: AppColors.primaryContainer,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
                               Icons.notifications_none_rounded,
-                              color: _orange,
+                              color: AppColors.primary,
                               size: 27,
                             ),
                           ),
@@ -132,7 +129,7 @@ class _OtpScreenState extends State<OtpScreen> {
                           'Code sent to ${widget.email}',
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            color: _muted,
+                            color: AppColors.muted,
                             fontSize: 12,
                           ),
                         ),
@@ -156,7 +153,7 @@ class _OtpScreenState extends State<OtpScreen> {
                                       FilteringTextInputFormatter.digitsOnly,
                                     ],
                                     style: const TextStyle(
-                                      color: _orange,
+                                      color: AppColors.primary,
                                       fontSize: 18,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -164,23 +161,23 @@ class _OtpScreenState extends State<OtpScreen> {
                                       counterText: '',
                                       contentPadding: EdgeInsets.zero,
                                       filled: true,
-                                      fillColor: Colors.white,
+                                      fillColor: AppColors.surface,
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(9),
                                         borderSide: const BorderSide(
-                                          color: Color(0xFFECE7E3),
+                                          color: AppColors.border,
                                         ),
                                       ),
                                       enabledBorder: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(9),
                                         borderSide: const BorderSide(
-                                          color: Color(0xFFECE7E3),
+                                          color: AppColors.border,
                                         ),
                                       ),
                                       focusedBorder: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(9),
                                         borderSide: const BorderSide(
-                                          color: _orange,
+                                          color: AppColors.primary,
                                           width: 1.4,
                                         ),
                                       ),
@@ -197,7 +194,7 @@ class _OtpScreenState extends State<OtpScreen> {
                         const SizedBox(height: 22),
                         AppButton(
                           text: 'Verify OTP',
-                          backgroundColor: _orange,
+                          backgroundColor: AppColors.primary,
                           isLoading: state is AuthLoading,
                           onPressed: _verify,
                         ),
@@ -205,13 +202,13 @@ class _OtpScreenState extends State<OtpScreen> {
                         TextButton(
                           onPressed: state is AuthLoading
                               ? null
-                              : () => context
-                                    .read<AuthCubit>()
-                                    .resendOtp(email: widget.email),
+                              : () => context.read<AuthCubit>().resendOtp(
+                                  email: widget.email,
+                                ),
                           child: const Text(
                             'Resend OTP',
                             style: TextStyle(
-                              color: _orange,
+                              color: AppColors.primary,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
@@ -238,7 +235,7 @@ class VerificationSuccessScreen extends StatelessWidget {
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: _cream,
+        backgroundColor: AppColors.canvas,
         body: SafeArea(
           child: Center(
             child: Padding(
@@ -250,12 +247,12 @@ class VerificationSuccessScreen extends StatelessWidget {
                     width: 64,
                     height: 64,
                     decoration: const BoxDecoration(
-                      color: Color(0xFFD9F8E8),
+                      color: AppColors.successContainer,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.check_circle_outline_rounded,
-                      color: Color(0xFF18C778),
+                      color: AppColors.success,
                       size: 34,
                     ),
                   ),
@@ -263,7 +260,7 @@ class VerificationSuccessScreen extends StatelessWidget {
                   const Text(
                     'Verified!',
                     style: TextStyle(
-                      color: _ink,
+                      color: AppColors.ink,
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
                     ),
@@ -271,13 +268,15 @@ class VerificationSuccessScreen extends StatelessWidget {
                   const SizedBox(height: 6),
                   const Text(
                     'Welcome to Easy Shop',
-                    style: TextStyle(color: _muted, fontSize: 12),
+                    style: TextStyle(color: AppColors.muted, fontSize: 12),
                   ),
                   const SizedBox(height: 28),
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
-                      style: FilledButton.styleFrom(backgroundColor: _orange),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                      ),
                       onPressed: () => Navigator.pushNamedAndRemoveUntil(
                         context,
                         Routes.store,

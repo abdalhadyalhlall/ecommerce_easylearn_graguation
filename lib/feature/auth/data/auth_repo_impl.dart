@@ -1,4 +1,6 @@
 import 'package:clean_arch_session/core/cache/cache_const.dart';
+import 'package:clean_arch_session/core/cache/cart_cache.dart';
+import 'package:clean_arch_session/core/cache/profile_cache.dart';
 import 'package:clean_arch_session/core/cache/cache_helper.dart';
 import 'package:clean_arch_session/core/networking/api_constants.dart';
 import 'package:clean_arch_session/core/networking/api_service.dart';
@@ -61,7 +63,9 @@ class AuthRepoImpl implements AuthRepo {
     final data = response.data;
     final token = data is Map ? data['token'] : null;
     if (token is! String || token.isEmpty) {
-      throw StateError('The OTP verification response did not contain a token.');
+      throw StateError(
+        'The OTP verification response did not contain a token.',
+      );
     }
     await CacheHelper.saveSecureData(
       key: CacheConstants.userToken,
@@ -91,6 +95,8 @@ class AuthRepoImpl implements AuthRepo {
   @override
   Future<String> logout() async {
     await CacheHelper.deleteSecureData(key: CacheConstants.userToken);
+    await CartCache.clear();
+    await ProfileCache.clear();
     return 'تم تسجيل الخروج بنجاح';
   }
 }

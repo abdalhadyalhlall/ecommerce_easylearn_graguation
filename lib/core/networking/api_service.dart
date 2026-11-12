@@ -22,12 +22,6 @@ class ApiService {
     RequestInterceptorHandler handler,
   ) async {
     try {
-      if (ApiConstants.apiKey.isEmpty) {
-        throw StateError(
-          'API key is missing. Provide it with --dart-define=API_KEY=...',
-        );
-      }
-
       options.headers['x-api-key'] = ApiConstants.apiKey;
       if (_requiresAuthentication(options.path)) {
         final token = await CacheHelper.getSecureData(

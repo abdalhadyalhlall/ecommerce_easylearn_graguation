@@ -6,17 +6,15 @@ class CatalogUseCases {
 
   CatalogUseCases(this._repository);
 
-  Future<List<StoreCategory>?> getCategories() {
+  Future<List<StoreCategory>> getCategories() {
     return _repository.getCategories();
   }
 
-  Future<StoreProductPage?> getProducts({
-    String? categoryUuid,
-    int page = 1,
-  }) {
-    return _repository.getProducts(
-      categoryUuid: categoryUuid,
-      page: page,
-    );
+  Future<List<StoreProduct>> getProducts({String? categorySlug}) {
+    return _repository.getProducts(categorySlug: categorySlug);
+  }
+
+  Future<StoreProduct> getProductDetails(String slug) {
+    return _repository.getProductDetails(slug);
   }
 }

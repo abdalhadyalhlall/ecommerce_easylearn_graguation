@@ -6,11 +6,25 @@ class OrderUseCases {
 
   OrderUseCases(this._repository);
 
-  Future<void> place() => _repository.placeOrder();
+  Future<StoreOrder> place({
+    required List<CartItem> items,
+    required String address,
+    required double? latitude,
+    required double? longitude,
+    required String paymentMethod,
+  }) {
+    return _repository.placeOrder(
+      items: items,
+      address: address,
+      latitude: latitude,
+      longitude: longitude,
+      paymentMethod: paymentMethod,
+    );
+  }
 
   Future<List<StoreOrder>> getOrders() => _repository.getOrders();
 
-  Future<StoreOrder> getOrder(String uuid) => _repository.getOrder(uuid);
+  Future<StoreOrder> getOrder(String code) => _repository.getOrder(code);
 
-  Future<void> delete(String uuid) => _repository.deleteOrder(uuid);
+  Future<String> pay(String code) => _repository.payOrder(code);
 }
